@@ -22,6 +22,11 @@ namespace Cache.NugetPackages {
     const WinX64DistributedCacheHost = importFrom("BuildXL.Cache.DistributedCache.Host").withQualifier({ configuration: qualifier.configuration, targetFramework: "netcoreapp3.0", targetRuntime: "win-x64" });
     const OsxX64DistributedCacheHost = importFrom("BuildXL.Cache.DistributedCache.Host").withQualifier({ configuration: qualifier.configuration, targetFramework: "netcoreapp3.0", targetRuntime: "osx-x64" });
 
+    const Net451RocksDb = importFrom("Sdk.Selfhost.RocksDbSharp").withQualifier({ targetFramework: "net451" });
+    const Net472RocksDb = importFrom("Sdk.Selfhost.RocksDbSharp").withQualifier({ targetFramework: "net472" });
+    const WinX64RocksDb = importFrom("Sdk.Selfhost.RocksDbSharp").withQualifier({ targetFramework: "netcoreapp3.0" });
+    const OsxX64RocksDb = importFrom("Sdk.Selfhost.RocksDbSharp").withQualifier({ targetFramework: "netcoreapp3.0" });
+
     export const tools : Deployment.Definition = {
         contents: [
             {
@@ -158,9 +163,9 @@ namespace Cache.NugetPackages {
             Nuget.createAssemblyLayoutWithSpecificRuntime(WinX64DistributedCacheHost.Configuration.dll, "win-x64", true),
             Nuget.createAssemblyLayoutWithSpecificRuntime(OsxX64DistributedCacheHost.Configuration.dll, "osx-x64", false),
         ]
-    }
+    };
 
-    export const library2 : DeploymentDefinition = {
+    export const library2 : Deployment.Definition = {
         contents: [
             // ContentStore.Library
             Nuget.createAssemblyLayout(Net451ContentStore.Library.dll),
@@ -174,9 +179,9 @@ namespace Cache.NugetPackages {
             Nuget.createAssemblyLayoutWithSpecificRuntime(WinX64ContentStore.Grpc.dll, "win-x64", true),
             Nuget.createAssemblyLayoutWithSpecificRuntime(OsxX64ContentStore.Grpc.dll, "osx-x64", false),
         ]
-    }
+    };
 
-    export const distributed2 : DeploymentDefinition = {
+    export const distributed2 : Deployment.Definition = {
         contents: [
             // ContentStore.Distributed
             Nuget.createAssemblyLayout(Net451ContentStore.Distributed.dll),
@@ -200,18 +205,18 @@ namespace Cache.NugetPackages {
             Nuget.createAssemblyLayoutWithSpecificRuntime(WinX64MemoizationStore.Interfaces.dll, "win-x64", true),
             Nuget.createAssemblyLayoutWithSpecificRuntime(OsxX64MemoizationStore.Interfaces.dll, "osx-x64", false),
         ]
-    }
+    };
 
-    export const service : DeploymentDefinition = {
+    export const service : Deployment.Definition = {
         contents: [
-            // BuildXL.Cache.Host.Services
+            // BuildXL.Cache.Host.Service
             Nuget.createAssemblyLayout(Net472DistributedCacheHost.Service.dll),
             Nuget.createAssemblyLayoutWithSpecificRuntime(WinX64DistributedCacheHost.Service.dll, "win-x64", true),
             Nuget.createAssemblyLayoutWithSpecificRuntime(OsxX64DistributedCacheHost.Service.dll, "osx-x64", false),
         ]
-    }
+    };
 
-    export const vsts : DeploymentDefinition = {
+    export const vsts : Deployment.Definition = {
         contents: [
             // ContentStore.Vsts
             ...addIfLazy(BuildXLSdk.Flags.isVstsArtifactsEnabled, () => [
@@ -235,5 +240,5 @@ namespace Cache.NugetPackages {
             Nuget.createAssemblyLayoutWithSpecificRuntime(WinX64MemoizationStore.VstsInterfaces.dll, "win-x64", true),
             Nuget.createAssemblyLayoutWithSpecificRuntime(OsxX64MemoizationStore.VstsInterfaces.dll, "osx-x64", false),
         ]
-    }
+    };
 }

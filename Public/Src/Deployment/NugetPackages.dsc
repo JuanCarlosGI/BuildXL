@@ -87,6 +87,88 @@ namespace NugetPackages {
         ]
     });
 
+    const cacheLibraries2 = !canBuildAllPackagesOnThisHost ? undefined : pack({
+        id: `${packageNamePrefix}.Cache.Libraries2`,
+        deployment: Cache.NugetPackages.library2,
+        dependencies: [
+            { id: `${packageNamePrefix}.Cache.Hashing`, version: Branding.Nuget.packageVersion},
+            { id: `${packageNamePrefix}.Cache.Interfaces2`, version: Branding.Nuget.packageVersion},
+            { id: "TransientFaultHandling.Core", version: "5.1.1209.1" }, // TODO: why can't I just import as pkg?
+
+            importFrom("Microsoft.Tpl.Dataflow").withQualifier({targetFramework: "net472"}).pkg,
+            importFrom("System.Interactive.Async").withQualifier({targetFramework: "net472"}).pkg,
+            importFrom("Grpc.Core").withQualifier({ targetFramework: "net472" }).pkg,
+            importFrom("Google.Protobuf").withQualifier({ targetFramework: "net472" }).pkg,
+            importFrom("StackExchange.Redis.StrongName").withQualifier({ targetFramework: "net472" }).pkg,
+            importFrom("System.Data.SQLite.Core").withQualifier({ targetFramework: "net472" }).pkg,
+        ]
+    });
+
+    const cacheDistributed2 = !canBuildAllPackagesOnThisHost ? undefined : pack({
+        id: `${packageNamePrefix}.Cache.Distributed2`,
+        deployment: Cache.NugetPackages.distributed2,
+        dependencies: [
+            { id: `${packageNamePrefix}.Cache.Hashing`, version: Branding.Nuget.packageVersion},
+            { id: `${packageNamePrefix}.Cache.Interfaces2`, version: Branding.Nuget.packageVersion},
+            { id: `${packageNamePrefix}.Cache.Libraries2`, version: Branding.Nuget.packageVersion},
+            { id: "TransientFaultHandling.Core", version: "5.1.1209.1" }, // TODO: why can't I just import as pkg?
+
+            importFrom("Microsoft.Azure.EventHubs").withQualifier({targetFramework: 'net472'}).pkg,
+            importFrom("System.Diagnostics.DiagnosticSource").withQualifier({targetFramework: 'net472'}).pkg, 
+            importFrom("Microsoft.IdentityModel.Tokens").withQualifier({targetFramework: 'net472'}).pkg,
+            importFrom("Microsoft.IdentityModel.Logging").withQualifier({targetFramework: 'net472'}).pkg,
+            importFrom("WindowsAzure.Storage").withQualifier({targetFramework: 'net472'}).pkg,
+            importFrom("StackExchange.Redis.StrongName").withQualifier({targetFramework: 'net472'}).pkg,
+            // importFrom("RocksDbSharpSigned").withQualifier({ targetFramework: "net472" }).pkg,
+            // importFrom("RocksDbNative").withQualifier({ targetFramework: "net472" }).pkg,
+            importFrom("System.Interactive.Async").withQualifier({ targetFramework: "net472" }).pkg,
+            importFrom("System.Data.SQLite.Core").withQualifier({ targetFramework: "net472" }).pkg,
+            importFrom("Grpc.Core").withQualifier({ targetFramework: "net472" }).pkg,
+            importFrom("Google.Protobuf").withQualifier({ targetFramework: "net472" }).pkg,
+        ]
+    });
+
+    const cacheService2 = !canBuildAllPackagesOnThisHost ? undefined : pack({
+        id: `${packageNamePrefix}.Cache.Service`,
+        deployment: Cache.NugetPackages.service,
+        dependencies: [
+            { id: `${packageNamePrefix}.Cache.Hashing`, version: Branding.Nuget.packageVersion},
+            { id: `${packageNamePrefix}.Cache.Interfaces2`, version: Branding.Nuget.packageVersion},
+            { id: `${packageNamePrefix}.Cache.Libraries2`, version: Branding.Nuget.packageVersion},
+            { id: `${packageNamePrefix}.Cache.Distributed2`, version: Branding.Nuget.packageVersion},
+            { id: "TransientFaultHandling.Core", version: "5.1.1209.1" }, // TODO: why can't I just import as pkg?
+
+            importFrom("WindowsAzure.Storage").withQualifier({targetFramework: 'net472'}).pkg,
+        ]
+    });
+
+    const cacheVsts2 = !canBuildAllPackagesOnThisHost ? undefined : pack({
+        id: `${packageNamePrefix}.Cache.Vsts`,
+        deployment: Cache.NugetPackages.vsts,
+        dependencies: [
+            { id: `${packageNamePrefix}.Cache.Hashing`, version: Branding.Nuget.packageVersion},
+            { id: `${packageNamePrefix}.Cache.Interfaces2`, version: Branding.Nuget.packageVersion},
+            { id: `${packageNamePrefix}.Cache.Libraries2`, version: Branding.Nuget.packageVersion},
+            { id: `${packageNamePrefix}.Cache.Distributed2`, version: Branding.Nuget.packageVersion},
+
+            { id: "TransientFaultHandling.Core", version: "5.1.1209.1" }, // TODO: why can't I just import as pkg?
+
+            importFrom("WindowsAzure.Storage").withQualifier({targetFramework: 'net472'}).pkg,
+            importFrom("Microsoft.IdentityModel.Clients.ActiveDirectory").withQualifier({targetFramework: 'net472'}).pkg,
+            importFrom("Microsoft.VisualStudio.Services.BlobStore.Client").withQualifier({targetFramework: 'net472'}).pkg,
+            importFrom("Microsoft.VisualStudio.Services.Client").withQualifier({targetFramework: 'net472'}).pkg,
+            importFrom("Microsoft.VisualStudio.Services.InteractiveClient").withQualifier({targetFramework: 'net472'}).pkg,
+            importFrom("Newtonsoft.Json.v10").withQualifier({targetFramework: 'net472'}).pkg,
+            importFrom("System.Interactive.Async").withQualifier({targetFramework: 'net472'}).pkg,
+
+            ...BuildXLSdk.withQualifier({
+                targetFramework: "net472",
+                targetRuntime: "win-x64",
+                configuration: qualifier.configuration
+            }).visualStudioServicesArtifactServicesSharedPkg,
+        ]
+    });
+
     const cacheInterfaces = !canBuildAllPackagesOnThisHost ? undefined : pack({
         id: `${packageNamePrefix}.Cache.Interfaces`,
         deployment: Cache.NugetPackages.interfaces,
@@ -98,9 +180,25 @@ namespace NugetPackages {
         ]
     });
 
+    const cacheInterfaces2 = !canBuildAllPackagesOnThisHost ? undefined : pack({
+        id: `${packageNamePrefix}.Cache.Interfaces2`,
+        deployment: Cache.NugetPackages.interfaces2,
+        dependencies: [
+            { id: `${packageNamePrefix}.Cache.Hashing`, version: Branding.Nuget.packageVersion},
+
+            importFrom("Microsoft.Tpl.Dataflow").withQualifier({targetFramework: "net472"}).pkg,
+            importFrom("System.Interactive.Async").withQualifier({targetFramework: "net472"}).pkg,
+            importFrom("Newtonsoft.Json").withQualifier({targetFramework: "net472"}).pkg
+        ]
+    });
+
     const cacheHashing = !canBuildAllPackagesOnThisHost ? undefined : pack({
         id: `${packageNamePrefix}.Cache.Hashing`,
-        deployment: Cache.NugetPackages.hashing
+        deployment: Cache.NugetPackages.hashing,
+        dependencies: [
+            importFrom("System.Threading.Tasks.Dataflow").withQualifier({targetFramework: "net472"}).pkg,
+            importFrom("System.Interactive.Async").withQualifier({targetFramework: "net472"}).pkg,
+        ]
     });
 
 
@@ -183,6 +281,11 @@ namespace NugetPackages {
                 cacheTools,
                 cacheLibraries,
                 cacheInterfaces,
+                cacheLibraries2,
+                cacheInterfaces2,
+                cacheDistributed2,
+                cacheService2,
+                cacheVsts2,
                 cacheHashing,
                 xldblibrary,
             ]),

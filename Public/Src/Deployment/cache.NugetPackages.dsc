@@ -22,10 +22,15 @@ namespace Cache.NugetPackages {
     const WinX64DistributedCacheHost = importFrom("BuildXL.Cache.DistributedCache.Host").withQualifier({ configuration: qualifier.configuration, targetFramework: "netcoreapp3.0", targetRuntime: "win-x64" });
     const OsxX64DistributedCacheHost = importFrom("BuildXL.Cache.DistributedCache.Host").withQualifier({ configuration: qualifier.configuration, targetFramework: "netcoreapp3.0", targetRuntime: "osx-x64" });
 
-    const Net451RocksDb = importFrom("Sdk.Selfhost.RocksDbSharp").withQualifier({ targetFramework: "net451" });
-    const Net472RocksDb = importFrom("Sdk.Selfhost.RocksDbSharp").withQualifier({ targetFramework: "net472" });
-    const WinX64RocksDb = importFrom("Sdk.Selfhost.RocksDbSharp").withQualifier({ targetFramework: "netcoreapp3.0" });
-    const OsxX64RocksDb = importFrom("Sdk.Selfhost.RocksDbSharp").withQualifier({ targetFramework: "netcoreapp3.0" });
+    const Net451BxlUtilities = importFrom("BuildXL.Utilities").withQualifier({ configuration: qualifier.configuration, targetFramework: "net451", targetRuntime: "win-x64" });
+    const Net472BxlUtilities = importFrom("BuildXL.Utilities").withQualifier({ configuration: qualifier.configuration, targetFramework: "net472", targetRuntime: "win-x64" });
+    const WinX64BxlUtilities = importFrom("BuildXL.Utilities").withQualifier({ configuration: qualifier.configuration, targetFramework: "netcoreapp3.0", targetRuntime: "win-x64" });
+    const OsxX64BxlUtilities = importFrom("BuildXL.Utilities").withQualifier({ configuration: qualifier.configuration, targetFramework: "netcoreapp3.0", targetRuntime: "osx-x64" });
+    
+    const Net451BxlUtilitiesInstrumentation = importFrom("BuildXL.Utilities.Instrumentation").withQualifier({ configuration: qualifier.configuration, targetFramework: "net451", targetRuntime: "win-x64" });
+    const Net472BxlUtilitiesInstrumentation = importFrom("BuildXL.Utilities.Instrumentation").withQualifier({ configuration: qualifier.configuration, targetFramework: "net472", targetRuntime: "win-x64" });
+    const WinX64BxlUtilitiesInstrumentation = importFrom("BuildXL.Utilities.Instrumentation").withQualifier({ configuration: qualifier.configuration, targetFramework: "netcoreapp3.0", targetRuntime: "win-x64" });
+    const OsxX64BxlUtilitiesInstrumentation = importFrom("BuildXL.Utilities.Instrumentation").withQualifier({ configuration: qualifier.configuration, targetFramework: "netcoreapp3.0", targetRuntime: "osx-x64" });
 
     export const tools : Deployment.Definition = {
         contents: [
@@ -239,6 +244,52 @@ namespace Cache.NugetPackages {
             Nuget.createAssemblyLayout(Net472MemoizationStore.VstsInterfaces.dll),
             Nuget.createAssemblyLayoutWithSpecificRuntime(WinX64MemoizationStore.VstsInterfaces.dll, "win-x64", true),
             Nuget.createAssemblyLayoutWithSpecificRuntime(OsxX64MemoizationStore.VstsInterfaces.dll, "osx-x64", false),
+        ]
+    };
+
+    export const bxlUtilities : Deployment.Definition = {
+        contents: [
+            // Utilities
+            Nuget.createAssemblyLayout(Net451BxlUtilities.dll),
+            Nuget.createAssemblyLayout(Net472BxlUtilities.dll),
+            Nuget.createAssemblyLayoutWithSpecificRuntime(WinX64BxlUtilities.dll, "win-x64", true),
+            Nuget.createAssemblyLayoutWithSpecificRuntime(OsxX64BxlUtilities.dll, "osx-x64", false),
+
+            // Utilities.Branding
+            Nuget.createAssemblyLayout(Net451BxlUtilities.Branding.dll),
+            Nuget.createAssemblyLayout(Net472BxlUtilities.Branding.dll),
+            Nuget.createAssemblyLayoutWithSpecificRuntime(WinX64BxlUtilities.Branding.dll, "win-x64", true),
+            Nuget.createAssemblyLayoutWithSpecificRuntime(OsxX64BxlUtilities.Branding.dll, "osx-x64", false),
+            
+            // Utilities.KeyValueStore
+            Nuget.createAssemblyLayout(Net451BxlUtilities.KeyValueStore.dll),
+            Nuget.createAssemblyLayout(Net472BxlUtilities.KeyValueStore.dll),
+            Nuget.createAssemblyLayoutWithSpecificRuntime(WinX64BxlUtilities.KeyValueStore.dll, "win-x64", true),
+            Nuget.createAssemblyLayoutWithSpecificRuntime(OsxX64BxlUtilities.KeyValueStore.dll, "osx-x64", false),
+            
+            // Utilities.Native
+            Nuget.createAssemblyLayout(Net451BxlUtilities.Native.dll),
+            Nuget.createAssemblyLayout(Net472BxlUtilities.Native.dll),
+            Nuget.createAssemblyLayoutWithSpecificRuntime(WinX64BxlUtilities.Native.dll, "win-x64", true),
+            Nuget.createAssemblyLayoutWithSpecificRuntime(OsxX64BxlUtilities.Native.dll, "osx-x64", false),
+            
+            // Utilities.Collections
+            Nuget.createAssemblyLayout(Net451BxlUtilities.Collections.dll),
+            Nuget.createAssemblyLayout(Net472BxlUtilities.Collections.dll),
+            Nuget.createAssemblyLayoutWithSpecificRuntime(WinX64BxlUtilities.Collections.dll, "win-x64", true),
+            Nuget.createAssemblyLayoutWithSpecificRuntime(OsxX64BxlUtilities.Collections.dll, "osx-x64", false),
+            
+            // Utilities.Interop
+            Nuget.createAssemblyLayout(Net451BxlUtilities.Interop.dll),
+            Nuget.createAssemblyLayout(Net472BxlUtilities.Interop.dll),
+            Nuget.createAssemblyLayoutWithSpecificRuntime(WinX64BxlUtilities.Interop.dll, "win-x64", true),
+            Nuget.createAssemblyLayoutWithSpecificRuntime(OsxX64BxlUtilities.Interop.dll, "osx-x64", false),
+
+            // Utilities.Instrumentation.Common
+            Nuget.createAssemblyLayout(Net451BxlUtilitiesInstrumentation.Common.dll),
+            Nuget.createAssemblyLayout(Net472BxlUtilitiesInstrumentation.Common.dll),
+            Nuget.createAssemblyLayoutWithSpecificRuntime(WinX64BxlUtilitiesInstrumentation.Common.dll, "win-x64", true),
+            Nuget.createAssemblyLayoutWithSpecificRuntime(OsxX64BxlUtilitiesInstrumentation.Common.dll, "osx-x64", false),
         ]
     };
 }

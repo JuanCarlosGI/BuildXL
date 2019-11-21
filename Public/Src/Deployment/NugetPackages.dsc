@@ -201,6 +201,22 @@ namespace NugetPackages {
         ]
     });
 
+    const bxlUtilities = !canBuildAllPackagesOnThisHost ? undefined : pack({
+        id: `${packageNamePrefix}.Utilities`,
+        deployment: Cache.NugetPackages.bxlUtilities,
+        dependencies: [
+            importFrom("System.IO.Pipes.AccessControl").withQualifier({targetFramework: "net472"}).pkg,
+            importFrom("System.Security.AccessControl").withQualifier({targetFramework: "net472"}).pkg,
+            importFrom("System.Threading.AccessControl").withQualifier({targetFramework: "net472"}).pkg,
+            importFrom("System.IO.FileSystem.AccessControl").withQualifier({targetFramework: "net472"}).pkg,
+            importFrom("System.Security.Principal.Windows").withQualifier({targetFramework: "net472"}).pkg,
+            // importFrom("RocksDbSharpSigned").withQualifier({ targetFramework: "net472" }).pkg,
+            // importFrom("RocksDbNative").withQualifier({ targetFramework: "net472" }).pkg,
+            importFrom("Microsoft.Win32.Registry").pkg,
+            importFrom("System.Security.Cryptography.ProtectedData").pkg,
+            importFrom("Newtonsoft.Json").pkg,
+        ]
+    });
 
     // Currently we deploy tools as self-contained .NET Core binaries for macOS only!
     const toolsSandBoxExec = pack({
@@ -288,6 +304,7 @@ namespace NugetPackages {
                 cacheVsts2,
                 cacheHashing,
                 xldblibrary,
+                bxlUtilities,
             ]),
             sdks,
             ...addIf(!BuildXLSdk.Flags.genVSSolution, osxX64, toolsOrchestrator),

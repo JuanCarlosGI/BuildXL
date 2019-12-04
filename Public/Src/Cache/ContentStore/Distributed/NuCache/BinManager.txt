@@ -1,1 +1,5 @@
-﻿
+﻿AddLocation(MachineLocation machine)
+{
+    FindLocationWithMinimumAmountOfBins()
+
+}

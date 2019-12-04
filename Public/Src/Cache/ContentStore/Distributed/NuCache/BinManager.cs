@@ -15,15 +15,13 @@ namespace BuildXL.Cache.ContentStore.Distributed.NuCache
 {
     public class BinManager
     {
-        private const int MaxBins = ushort.MaxValue + 1;
+        private const int MaxBins = 1 << 16;
 
         private readonly HashSet<MachineLocation>[] _locationEntries;
         private readonly int _entriesPerLocation;
-        private readonly int _hashSeeds;
         private readonly int _locationsPerBin;
         private readonly object _lockObject = new object();
-
-        private ConcurrentDictionary<MachineLocation, bool> machines = new ConcurrentDictionary<MachineLocation, bool>();
+        private readonly ConcurrentDictionary<MachineLocation, bool> _machines = new ConcurrentDictionary<MachineLocation, bool>();
 
         private MachineLocation[][] _bins;
 
@@ -54,18 +52,18 @@ namespace BuildXL.Cache.ContentStore.Distributed.NuCache
         {
             if (isAdd)
             {
-                machines[location] = true;
+                _machines[location] = true;
             }
             else
             {
-                machines.TryRemove(location, out _);
+                _machines.TryRemove(location, out _);
             }
 
             var hasher = ContentHashers.Get(HashType.MD5);
             for (var i = 0; i < _entriesPerLocation; i++)
             {
                 var hash = hasher.GetContentHash(Encoding.UTF8.GetBytes(location.Path + i));//  HashCodeHelper.GetOrdinalHashCode(location.Path + i);
-                var index = unchecked((uint)BitConverter.ToUInt32(hash.ToByteArray(), 1)) % _locationEntries.Length;
+                var index = unchecked(BitConverter.ToUInt32(hash.ToByteArray(), 1)) % _locationEntries.Length;
                 var entrySet = _locationEntries[index];
                 if (entrySet == null)
                 {
@@ -114,106 +112,57 @@ namespace BuildXL.Cache.ContentStore.Distributed.NuCache
         /// <summary>
         ///     Computes the designated locations for each of the bins.
         ///     The way this is done is by getting the next x machines (clockwise in a "circular array"),
-        /// avoiding repetitions.
-        ///
-        /// Steps:
-        /// 1: Calculate first bin, just enumerating until we find x different locations
-        /// 2: If first bin has less than x locations, just assign that for all bins, as there are not x distinct machines
-        /// 3: Calculate the rest of the bins starting from the end. If the bin that we're calculating has a location assigned to it,
-        ///     replace the last bin's last location with the current location. If last bin already contains the current location, just move
-        ///     that location to the front of the bin.
+        /// avoiding repetitions, and skipping overused locations to balance content between all locations.
         /// </summary>
         private MachineLocation[][] ComputeBins()
         {
             var bins = new MachineLocation[_locationEntries.Length][];
 
-            // Calculate first bin.
-            var first = new List<MachineLocation>();
+            var maxMachineUsage = 1 + (_locationEntries.Length * _locationsPerBin) / _machines.Count;
+            var locationUsage = new ConcurrentDictionary<MachineLocation, int>();
 
-            ConcurrentDictionary<MachineLocation, int> locationUsage = new ConcurrentDictionary<MachineLocation, int>();
-
-            void computeFirst()
+            for (int i = 0, max = _locationEntries.Length; i < max; i++)
             {
-                for (var entryIndex = 0; entryIndex < _locationEntries.Length; entryIndex++)
+                var bin = new List<MachineLocation>();
+
+                for (int j = i, end = max + i; j < end; j++)
                 {
-                    foreach (var location in GetLocationsAt(entryIndex))
+                    foreach (var location in getLocationsAt(j % max))
                     {
-                        if (!first.Contains(location))
+                        if (!bin.Contains(location))
                         {
-                            first.Add(location);
-                            if (first.Count == _locationsPerBin)
+                            if (locationUsage.AddOrUpdate(location, 1, (k, v) => v + 1) < maxMachineUsage)
                             {
-                                return;
+                                bin.Add(location);
+                                if (bin.Count == _locationsPerBin)
+                                {
+                                    break;
+                                }
                             }
                         }
                     }
-                }
-            }
 
-            computeFirst();
-
-            // If not enough locations, all bins will be equal.
-            if (first.Count < _locationsPerBin)
-            {
-                var entry = first.ToArray();
-                for (var i = 0; i < bins.Length; i++)
-                {
-                    bins[i] = entry;
-                }
-
-                return bins;
-            }
-
-            var maxMachineUsage = 1 + (_locationEntries.Length * _locationsPerBin) / machines.Count;
-
-            // Calculate the rest of the bins starting from the back
-            bins[0] = first.ToArray();
-            var bin = bins[0];
-            for (var entryIndex = _locationEntries.Length - 1; entryIndex > 0; entryIndex--)
-            {
-                foreach (var location in GetLocationsAt(entryIndex))
-                {
-                    if (locationUsage.AddOrUpdate(location, 1, (k, v) => v + 1) < maxMachineUsage)
+                    if (bin.Count == _locationsPerBin)
                     {
-                        bin = insertFirst(bin, location);
+                        break;
                     }
                 }
 
-                bins[entryIndex] = bin;
+                bins[i] = bin.ToArray();
             }
 
             return bins;
 
-            static MachineLocation[] insertFirst(MachineLocation[] source, MachineLocation value)
+            IEnumerable<MachineLocation> getLocationsAt(int entryIndex)
             {
-                var target = new MachineLocation[source.Length];
-                target[0] = value;
-
-                int targetIndex = 1;
-                for (int sourceIndex = 0; sourceIndex < source.Length && targetIndex < target.Length; sourceIndex++)
+                var entry = _locationEntries[entryIndex];
+                if (entry != null)
                 {
-                    if (source[sourceIndex].Equals(value))
-                    {
-                        continue;
-                    }
-
-                    target[targetIndex] = source[sourceIndex];
-                    targetIndex++;
+                    return entry.OrderBy(l => l.Path);
                 }
 
-                return target;
+                return Enumerable.Empty<MachineLocation>();
             }
-        }
-
-        private IEnumerable<MachineLocation> GetLocationsAt(int entryIndex)
-        {
-            var entry = _locationEntries[entryIndex];
-            if (entry != null)
-            {
-                return entry.OrderBy(l => l.Path);
-            }
-
-            return Enumerable.Empty<MachineLocation>();
         }
 
         public override string ToString()

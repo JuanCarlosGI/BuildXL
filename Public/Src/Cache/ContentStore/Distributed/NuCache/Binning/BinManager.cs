@@ -185,13 +185,7 @@ namespace BuildXL.Cache.ContentStore.Distributed.NuCache.Binning
             return null;
         }
 
-        public IReadOnlyList<MachineLocation> GetLocations(ContentHash hash)
-        {
-            var index = hash[0] | hash[1] << 8;
-            return _bins[index].Assignments.Select(e => e.Location).ToArray();
-        }
-
-        internal MachineLocation[][] GetBins() => _bins.Select(bin => bin.Assignments.Where(a => a.ExpiryTime == null).Select(assignment => assignment.Location).ToArray()).ToArray();
+        public BinMappings GetBins() => new BinMappings(_bins.Select(bin => bin.Assignments.Select(assignment => new MappingWithExpiry(assignment.Location, assignment.ExpiryTime)).ToArray()).ToArray());
 
         // Not sure if the class should manage itself or if it should receive an external signal to prune.
         public void Prune()

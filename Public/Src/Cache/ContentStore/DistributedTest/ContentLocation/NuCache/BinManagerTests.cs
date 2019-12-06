@@ -69,20 +69,21 @@ namespace BuildXL.Cache.ContentStore.Distributed.Test.ContentLocation.NuCache
             static bool isPowerOfTwo(int num) => (num & (num - 1)) == 0;
             var perfectlyBalanced = isPowerOfTwo(locations.Count);
 
-            var bins = manager.GetBins();
+            var binMappings = manager.GetBins();
             var counts = new Dictionary<string, int>();
             foreach (var location in locations)
             {
                 counts[location.Path] = 0;
             }
 
-            foreach (var bin in bins)
+            foreach (var bin in binMappings.GetBins())
             {
-                bin.Length.Should().Be(expectedLocationsPerBin);
+                var validMappings = bin.Where(mapping => !mapping.IsExpired).ToArray();
+                validMappings.Length.Should().Be(expectedLocationsPerBin);
 
-                foreach (var location in bin)
+                foreach (var mapping in validMappings)
                 {
-                    counts[location.Path]++;
+                    counts[mapping.Location.Path]++;
                 }
             }
 

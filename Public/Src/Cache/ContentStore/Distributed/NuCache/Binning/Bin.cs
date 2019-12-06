@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.ContractsLight;
+using System.IO;
 using System.Linq;
 using BuildXL.Cache.ContentStore.Interfaces.Time;
+using BuildXL.Utilities;
 
 #nullable enable
 
@@ -92,6 +94,42 @@ namespace BuildXL.Cache.ContentStore.Distributed.NuCache.Binning
         public override string ToString()
         {
             return string.Join(",", _binAssignments.Select(a => a.Location.Path));
+        }
+
+        /// <summary>
+        /// Serializes itself into a stream writer
+        /// </summary>
+        /// <param name="writer"></param>
+        public void Serialize(BuildXLWriter writer)
+        {
+            writer.WriteReadOnlyList(_binAssignments.ToArray(), (w, assignment) =>
+            {
+                var data = assignment.Location.Data;
+                w.Write(data.Length);
+                w.Write(data);
+                w.Write(assignment.ExpiryTime != null);
+                if (assignment.ExpiryTime != null)
+                {
+                    w.Write(assignment.ExpiryTime.Value);
+                }
+            });
+        }
+
+        public static (MachineLocation, DateTime?)[] Deserialize(BuildXLReader reader)
+        {
+            return reader.ReadArray<(MachineLocation, DateTime?)>(r =>
+            {
+                var locationLength = r.ReadInt32();
+                var data = r.ReadBytes(locationLength);
+                var hasExpiry = r.ReadBoolean();
+                DateTime? expiry = null;
+                if (hasExpiry)
+                {
+                    expiry = r.ReadDateTime();
+                }
+
+                return (new MachineLocation(data), expiry);
+            });
         }
     }
 }

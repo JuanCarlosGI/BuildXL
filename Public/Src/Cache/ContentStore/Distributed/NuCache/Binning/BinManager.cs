@@ -14,7 +14,7 @@ namespace BuildXL.Cache.ContentStore.Distributed.NuCache.Binning
     {
         public const int NumberOfBins = 1 << 16;
 
-        public int LocationsPerBin { get; }
+        internal int LocationsPerBin { get; }
 
         private readonly List<Bin> _bins;
         private readonly IClock _clock;
@@ -71,7 +71,7 @@ namespace BuildXL.Cache.ContentStore.Distributed.NuCache.Binning
         public void AddLocation(MachineLocation item)
         {
             var locationWithBinAssignments = _locationToAssignments.GetOrAdd(item, i => new LocationWithBinAssignments(item));
-            Contract.Assert(locationWithBinAssignments.BinAssignments.All(e => e.ExpiryTime == null), "Adding locations twice before removing is not supported.");
+            Contract.Assert(locationWithBinAssignments.ValidAssignmentCount == 0, "Adding locations twice before removing is not supported.");
 
             _locationsByAssignmentCount.Add(locationWithBinAssignments);
 
@@ -81,44 +81,50 @@ namespace BuildXL.Cache.ContentStore.Distributed.NuCache.Binning
                 bin.AddLocation(locationWithBinAssignments);
             }
 
-            // Optimization for when there are a small amount of machines.
-            // Adding locations for this case was extremely slow.
-            // Instead of looking through all assigned bins, all bins will keep track of which bins the location we're currently adding has been assigned to.
-            Dictionary<LocationWithBinAssignments, HashSet<Bin>>? availableBinsDictionary = null;
+            Func<LocationWithBinAssignments, BinAssignment> getNextAssignmentToReplace;
             if (locationWithBinAssignments.ValidAssignmentCount == 0 && _locationsByAssignmentCount.Max!.ValidAssignmentCount > _locationsByAssignmentCount.Count)
             {
-                availableBinsDictionary = new Dictionary<LocationWithBinAssignments, HashSet<Bin>>();
+                // This implementation performs better when there is a small amount of total locations
+                // Track, for all locations, the bins that are still valid for the location we're adding.
+
+                var availableBinsDictionary = new Dictionary<LocationWithBinAssignments, HashSet<Bin>>();
                 foreach (var location in _locationsByAssignmentCount.Where(location => location != locationWithBinAssignments))
                 {
+                    // Initially all assignments from all locations are eligible
                     availableBinsDictionary[location] = new HashSet<Bin>(location.BinsAssignedTo);
                 }
+
+                getNextAssignmentToReplace = fromLocation =>
+                {
+                    var binToReplace = availableBinsDictionary[fromLocation].First();
+
+                    // Assignments in this bin are now ineligible for all locations.
+                    foreach (var other in availableBinsDictionary)
+                    {
+                        other.Value.Remove(binToReplace);
+                    }
+
+                    return binToReplace.Assignments.First(a => a.LocationWithAssignments == fromLocation);
+                };
+            }
+            else
+            {
+                // This implementation performs better when there are lots of machines, thus each having less assigned bins.
+                // Walk through assignments until one of them is in a bin that does not contain the location we're adding.
+
+                getNextAssignmentToReplace = fromLocation =>
+                {
+                    return fromLocation.BinsAssignedTo
+                        .Except(locationWithBinAssignments.BinsAssignedTo)
+                        .Select(bin => bin.Assignments.First(assignment => assignment.ExpiryTime == null && assignment.LocationWithAssignments == fromLocation)).First();
+                };
             }
 
             // Balance bins by taking bins from items with most assigned bins.
             while (locationWithBinAssignments.ValidAssignmentCount < _locationsByAssignmentCount.Max!.ValidAssignmentCount - 1)
             {
                 var max = _locationsByAssignmentCount.Max!;
-
-                BinAssignment assignmentToReplace;
-
-                if (availableBinsDictionary == null)
-                {
-                    // First assignment which isn't set to expire or is in a bin that contains the item we want to add.
-                    assignmentToReplace = max.BinsAssignedTo
-                        .Except(locationWithBinAssignments.BinsAssignedTo)
-                        .Select(bin => bin.Assignments.First(assignment => assignment.ExpiryTime == null && assignment.LocationWithAssignments == max)).First();
-                }
-                else
-                {
-                    var binToReplace = availableBinsDictionary[max].First();
-                    assignmentToReplace = binToReplace.Assignments.First(a => a.LocationWithAssignments == max);
-
-                    foreach (var other in availableBinsDictionary)
-                    {
-                        other.Value.Remove(binToReplace);
-                    }
-                }
-
+                var assignmentToReplace = getNextAssignmentToReplace(max);
                 assignmentToReplace.Bin.ReplaceAssignment(assignmentToReplace, newLocation: locationWithBinAssignments);
             }
         }

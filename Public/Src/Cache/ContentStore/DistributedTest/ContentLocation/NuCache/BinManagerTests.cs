@@ -31,11 +31,10 @@ namespace BuildXL.Cache.ContentStore.Distributed.Test.ContentLocation.NuCache
             return (manager, locations);
         }
 
+        // Use this to meassure how long it takes to start with 0 machines and add 1024 machines to test performance
         [Fact]
         private void PerfTest()
         {
-            // Start with 0 machines and add 1024 mahcines to test performance
-
             var locations = Enumerable.Range(0, 1024).Select(num => new MachineLocation(num.ToString()));
             var manager = new BinManager(locationsPerBin: 3, startLocatons: new MachineLocation[0], SystemClock.Instance);
             foreach (var location in locations)

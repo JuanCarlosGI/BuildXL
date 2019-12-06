@@ -396,7 +396,7 @@ namespace BuildXL.Cache.Host.Service.Internal
         {
             var storageSecretNames = GetAzureStorageSecretNames(errorBuilder);
             // This would have failed earlier otherwise
-            Contract.Assert(storageSecretNames != null);
+            Contract.AssertNotNull(storageSecretNames);
 
             var credentials = new List<AzureBlobStorageCredentials>();
             foreach (var secretName in storageSecretNames)

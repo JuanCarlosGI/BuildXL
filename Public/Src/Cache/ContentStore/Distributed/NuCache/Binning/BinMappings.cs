@@ -16,7 +16,7 @@ namespace BuildXL.Cache.ContentStore.Distributed.NuCache.Binning
 
         public static BinMappings Deserialize(byte[] bytes)
         {
-            using var stream = new MemoryStream();
+            using var stream = new MemoryStream(bytes);
             using var reader = new BuildXLReader(debug: false, stream, leaveOpen: false);
 
             var bins = reader.ReadArray(DeserializeBin);
@@ -50,7 +50,7 @@ namespace BuildXL.Cache.ContentStore.Distributed.NuCache.Binning
             return stream.ToArray();
         }
 
-        public void SerializeBin(BuildXLWriter writer, MappingWithExpiry[] bin)
+        private void SerializeBin(BuildXLWriter writer, MappingWithExpiry[] bin)
         {
             writer.WriteReadOnlyList(bin, (w, assignment) =>
             {

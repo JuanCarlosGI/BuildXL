@@ -99,5 +99,44 @@ namespace BuildXL.Cache.ContentStore.Distributed.Test.ContentLocation.NuCache
                 }
             }
         }
+
+        [Fact]
+        public void BinMappingsSerializeAndDezerialize()
+        {
+            var locationsPerBin = 3;
+            var bins = 3;
+
+            var mappings = new List<List<MappingWithExpiry>>();
+            for (var bin = 0; bin < bins; bin++)
+            {
+                var mapping = new List<MappingWithExpiry>();
+                mappings.Add(mapping);
+                for (int start = bin * locationsPerBin, end = start + locationsPerBin, curr = start; curr < end; curr++)
+                {
+                    var location = new MachineLocation(curr.ToString());
+                    var entry = new MappingWithExpiry(location, null);
+                    mapping.Add(entry);
+                }
+
+                mapping.Add(new MappingWithExpiry(new MachineLocation("*"), DateTime.Now));
+            }
+
+            var binMappings = new BinMappings(mappings.Select(m => m.ToArray()).ToArray());
+
+            var bytes = binMappings.Serialize();
+
+            var deserialized = BinMappings.Deserialize(bytes);
+            var deserializedBins = deserialized.GetBins();
+
+            for (var bin = 0; bin < bins; bin++)
+            {
+                deserializedBins[bin].Count.Should().Be(mappings[bin].Count);
+                for (var mapping = 0; mapping < locationsPerBin + 1; mapping++)
+                {
+                    deserializedBins[bin][mapping].Location.Path.Should().Be(mappings[bin][mapping].Location.Path);
+                    deserializedBins[bin][mapping].Expiry.Should().Be(mappings[bin][mapping].Expiry);
+                }
+            }
+        }
     }
 }

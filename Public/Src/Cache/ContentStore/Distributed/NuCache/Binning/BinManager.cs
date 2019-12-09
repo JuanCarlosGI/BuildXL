@@ -68,6 +68,155 @@ namespace BuildXL.Cache.ContentStore.Distributed.NuCache.Binning
             }
         }
 
+        public BinManager(int locationsPerBin, BinMappings binMappings, IClock clock)
+        {
+            LocationsPerBin = locationsPerBin;
+            _clock = clock;
+            _locationsByAssignmentCount = new SortedSet<LocationWithBinAssignments>(new ItemComparer());
+            _bins = new List<Bin>(NumberOfBins);
+            _locationToAssignments = new Dictionary<MachineLocation, LocationWithBinAssignments>();
+
+            var bins = binMappings.GetBins();
+            Contract.Assert(bins.Count == NumberOfBins);
+
+            var previousLocationsPerBin = bins[0].Count(m => !m.IsExpired);
+
+            if (previousLocationsPerBin == locationsPerBin)
+            {
+                InitializeFromSameAmountOfLocations(bins);
+            }
+            else if (previousLocationsPerBin < locationsPerBin)
+            {
+                InitializeFromLessAmountOfLocations(bins, previousLocationsPerBin);
+            }
+            else
+            {
+                InitializeFromMoreAmountOfLocations(bins);
+            }
+        }
+
+        private void InitializeFromMoreAmountOfLocations(IReadOnlyList<IReadOnlyList<MappingWithExpiry>> bins)
+        {
+            var activeLocations = new HashSet<LocationWithBinAssignments>();
+
+            foreach (var mapping in bins)
+            {
+                var bin = new Bin(this, _clock);
+                _bins.Add(bin);
+
+                var added = 0;
+
+                // Add everything to fill bin capacity.
+                foreach (var locationWithExpiry in mapping)
+                {
+                    var locationWithAssignments = _locationToAssignments.GetOrAdd(locationWithExpiry.Location, m => new LocationWithBinAssignments(m));
+
+                    if (locationWithExpiry.Expiry.HasValue)
+                    {
+                        bin.AddLocation(locationWithAssignments);
+
+                        if (locationWithExpiry.Expiry.HasValue)
+                        {
+                            var assignment = bin.Assignments.First(a => a.LocationWithAssignments == locationWithAssignments);
+                            bin.Expire(assignment, locationWithExpiry.Expiry.Value);
+                        }
+                    }
+                    else
+                    {
+                        activeLocations.Add(locationWithAssignments);
+
+                        if (added < LocationsPerBin)
+                        {
+                            added++;
+                            bin.AddLocation(locationWithAssignments);
+                        }
+                    }
+                }
+            }
+
+            Prune();
+
+            // Make sure that all acitve locations are in the queue.
+            foreach (var location in activeLocations)
+            {
+                _locationsByAssignmentCount.Add(location);
+            }
+
+            // Balance by giving assignments from the most assigned to the least assigned.
+            while (_locationsByAssignmentCount.Min!.ValidAssignmentCount < _locationsByAssignmentCount.Max!.ValidAssignmentCount - 1)
+            {
+                var min = _locationsByAssignmentCount.Min!;
+                var max = _locationsByAssignmentCount.Max!;
+
+                var assignmentToReplace = max.BinsAssignedTo
+                    .Except(min.BinsAssignedTo)
+                    .Select(bin => bin.Assignments.First(assignment => assignment.ExpiryTime == null && assignment.LocationWithAssignments == max)).First();
+
+                assignmentToReplace.Bin.ReplaceAssignment(assignmentToReplace, min);
+            }
+        }
+
+        private void InitializeFromSameAmountOfLocations(IReadOnlyList<IReadOnlyList<MappingWithExpiry>> bins)
+        {
+            foreach (var mapping in bins)
+            {
+                var bin = new Bin(this, _clock);
+                _bins.Add(bin);
+
+                foreach (var locationWithExpiry in mapping)
+                {
+                    var locationWithAssignments = _locationToAssignments.GetOrAdd(locationWithExpiry.Location, m => new LocationWithBinAssignments(m));
+                    bin.AddLocation(locationWithAssignments);
+
+                    if (locationWithExpiry.Expiry.HasValue)
+                    {
+                        var assignment = bin.Assignments.First(a => a.LocationWithAssignments == locationWithAssignments);
+                        bin.Expire(assignment, locationWithExpiry.Expiry.Value);
+                    }
+                }
+            }
+
+            foreach (var locationWithAssignments in _locationToAssignments.Values)
+            {
+                _locationsByAssignmentCount.Add(locationWithAssignments);
+            }
+        }
+
+        private void InitializeFromLessAmountOfLocations(IReadOnlyList<IReadOnlyList<MappingWithExpiry>> bins, int previousLocationsPerBin)
+        {
+            InitializeFromSameAmountOfLocations(bins);
+
+            // Only attempt to fill if there are enough locations to do so.
+            if (_locationToAssignments.Count > previousLocationsPerBin)
+            {
+                if (_locationToAssignments.Count < LocationsPerBin)
+                {
+                    // Still more locations we can assign, but not enough to fill all the bins
+
+                    foreach (var bin in _bins)
+                    {
+                        foreach (var location in _locationToAssignments.Values.Where(l => bin.Assignments.All(a => a.LocationWithAssignments != l)))
+                        {
+                            bin.AddLocation(location);
+                        }
+                    }
+                }
+                else
+                {
+                    // We can fill all our bins.
+
+                    foreach (var bin in _bins)
+                    {
+                        while (bin.ValidLocationCount < LocationsPerBin)
+                        {
+                            var minLocation = _locationsByAssignmentCount.Min!;
+                            bin.AddLocation(minLocation);
+                        }
+                    }
+                }
+            }
+        }
+
         public void AddLocation(MachineLocation item)
         {
             var locationWithBinAssignments = _locationToAssignments.GetOrAdd(item, i => new LocationWithBinAssignments(item));

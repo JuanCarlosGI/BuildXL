@@ -6,8 +6,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.ContractsLight;
 using System.Linq;
+using BuildXL.Cache.ContentStore.Distributed.NuCache.Binning;
 using BuildXL.Cache.ContentStore.Hashing;
 using BuildXL.Cache.ContentStore.Interfaces.Results;
+using BuildXL.Cache.ContentStore.Interfaces.Time;
 using BuildXL.Cache.ContentStore.UtilitiesCore;
 using BuildXL.Utilities.Collections;
 using BuildXL.Utilities.Threading;
@@ -67,8 +69,8 @@ namespace BuildXL.Cache.ContentStore.Distributed.NuCache
                 ? null
                 : new BinManager(
                     locationsPerBin: configuration.ProactiveCopyLocationsThreshold,
-                    entriesPerLocation: configuration.ProactiveCopyEntriesPerDesignatedLocation,
-                    numberOfBins: configuration.ProactiveCopyDesignatedLocationBins);
+                    startLocatons: new MachineLocation[0],
+                    SystemClock.Instance);
         }
 
         /// <summary>
@@ -212,6 +214,6 @@ namespace BuildXL.Cache.ContentStore.Distributed.NuCache
         /// <summary>
         /// Gets the set of locations designated for a hash. This is relevant for proactive copies and eviction.
         /// </summary>
-        public MachineLocation[] GetDesignatedLocations(ContentHash hash) => _binManager?.GetLocations(hash) ?? CollectionUtilities.EmptyArray<MachineLocation>();
+        public MachineLocation[] GetDesignatedLocations(ContentHash hash) => _binManager?.GetBinMappings().GetLocations(hash).Select(l => l.Location).ToArray() ?? CollectionUtilities.EmptyArray<MachineLocation>();
     }
 }

@@ -185,7 +185,7 @@ namespace BuildXL.Cache.ContentStore.Distributed.NuCache.Binning
             return null;
         }
 
-        public BinMappings GetBins() => new BinMappings(_bins.Select(bin => bin.Assignments.Select(assignment => new MappingWithExpiry(assignment.Location, assignment.ExpiryTime)).ToArray()).ToArray());
+        public BinMappings GetBinMappings() => new BinMappings(_bins.Select(bin => bin.Assignments.Select(assignment => new MappingWithExpiry(assignment.Location, assignment.ExpiryTime)).ToArray()).ToArray());
 
         // Not sure if the class should manage itself or if it should receive an external signal to prune.
         public void Prune()
